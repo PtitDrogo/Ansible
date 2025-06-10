@@ -84,6 +84,7 @@
       debug:
         msg: "Add this SSH key to your GitHub account: {{ ssh_public_key.content | b64decode }}"
 
+    #Install Node
     - name: Download NodeSource setup script
       get_url:
         url: https://deb.nodesource.com/setup_20.x
@@ -105,6 +106,12 @@
         state: present
       become: yes
     
+    #Install typescript
+    - name: Install TypeScript globally
+      npm:
+        name: typescript
+        global: yes
+
     # Install Go
     - name: Download Go
       get_url:
