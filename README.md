@@ -20,8 +20,12 @@ If this fails asks big C for help until it works
 ansible-playbook -i inventory-local.ini setup-vm.yml --ask-become-pass
 ```
 # Don't forget to configure Git
+```
 git config --global user.name "Your Name"
+```
+```
 git config --global user.email "your@email.com"
+```
 
 (And add the ssh key to your github !)
 
