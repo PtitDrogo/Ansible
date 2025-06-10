@@ -11,7 +11,7 @@ sudo apt install ansible
 # Copy this repo
 In the repo run this command to test the connection:
 ```
-- ansible -i inventory-local.ini all -m ping
+ansible -i inventory-local.ini all -m ping
 ```
 If this fails asks big C for help until it works
 
