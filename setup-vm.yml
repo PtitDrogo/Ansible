@@ -78,28 +78,27 @@
       debug:
         msg: "Add this SSH key to your GitHub account: {{ ssh_public_key.content | b64decode }}"
 
-    # Install Node.js
-    - name: Download NodeSource GPG key
+    - name: Download NodeSource setup script
       get_url:
-        url: https://deb.nodesource.com/gpgkey/nodesource.gpg.key
-        dest: /tmp/nodesource.gpg.key
+        url: https://deb.nodesource.com/setup_20.x
+        dest: /tmp/nodesource_setup.sh
+        mode: '0755'
 
-    - name: Add NodeSource GPG key
-      apt_key:
-        file: /tmp/nodesource.gpg.key
-        state: present
+    - name: Run NodeSource setup script
+      shell: /tmp/nodesource_setup.sh
+      become: yes
 
-    - name: Add NodeSource repository
-      apt_repository:
-        repo: "deb https://deb.nodesource.com/node_20.x {{ ansible_distribution_release }} main"
-        state: present
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+      become: yes
 
     - name: Install Node.js
       apt:
         name: nodejs
         state: present
-        update_cache: yes
-
+      become: yes
+    
     # Install Go
     - name: Download Go
       get_url:
@@ -182,24 +181,11 @@
         name: docker
         state: started
         enabled: yes
-
-    # Install VS Code
-    - name: Add Microsoft GPG key
-      apt_key:
-        url: https://packages.microsoft.com/keys/microsoft.asc
-        state: present
-
-    - name: Add VS Code repository
-      apt_repository:
-        repo: "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/trusted.gpg.d/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main"
-        state: present
-
-    - name: Install VS Code
-      apt:
+    - name: Install VS Code via snap
+      snap:
         name: code
-        state: present
-        update_cache: yes
-
+        classic: yes
+      become: yes
     # Git Configuration Reminder
     - name: Create git config reminder
       copy:
