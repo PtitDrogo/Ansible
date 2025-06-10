@@ -10,12 +10,15 @@ sudo apt install ansible
 
 # Copy this repo
 In the repo run this command to test the connection:
+```
 - ansible -i inventory-local.ini all -m ping
+```
 If this fails asks big C for help until it works
 
 # Run Ansible for real
+```
 ansible-playbook -i inventory-local.ini setup-vm.yml --ask-become-pass
-
+```
 # Don't forget to configure Git
 git config --global user.name "Your Name"
 git config --global user.email "your@email.com"
