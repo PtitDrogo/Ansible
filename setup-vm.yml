@@ -50,6 +50,12 @@
         name: "{{ username }}"
         groups: sudo
         append: yes
+    # Install entr
+    - name: Install entr
+      apt:
+        name: entr
+        state: present
+        update_cache: yes
 
     # SSH Key Generation
     - name: Generate SSH key for GitHub
