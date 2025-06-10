@@ -1,0 +1,235 @@
+---
+- name: Setup Development VM Environment
+  hosts: all
+  become: yes
+  vars:
+    username: "{{ ansible_user }}"
+    
+  tasks:
+    # System Updates
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Upgrade all packages
+      apt:
+        upgrade: dist
+
+    # Essential Development Tools
+    - name: Install essential packages
+      apt:
+        name:
+          - git
+          - curl
+          - wget
+          - vim
+          - nano
+          - htop
+          - tree
+          - unzip
+          - software-properties-common
+          - apt-transport-https
+          - ca-certificates
+          - gnupg
+          - lsb-release
+          - build-essential
+          - make
+          - gcc
+          - g++
+          - clang
+          - python3
+          - python3-pip
+          - python3-venv
+          - zsh
+        state: present
+
+    # Add user to sudo group
+    - name: Add user to sudo group
+      user:
+        name: "{{ username }}"
+        groups: sudo
+        append: yes
+
+    # SSH Key Generation
+    - name: Generate SSH key for GitHub
+      openssh_keypair:
+        path: "/home/{{ username }}/.ssh/id_rsa"
+        type: rsa
+        size: 4096
+        owner: "{{ username }}"
+        group: "{{ username }}"
+        mode: '0600'
+      become_user: "{{ username }}"
+
+    - name: Set SSH directory permissions
+      file:
+        path: "/home/{{ username }}/.ssh"
+        owner: "{{ username }}"
+        group: "{{ username }}"
+        mode: '0700'
+
+    - name: Display SSH public key for GitHub
+      slurp:
+        src: "/home/{{ username }}/.ssh/id_rsa.pub"
+      register: ssh_public_key
+
+    - name: Show SSH public key
+      debug:
+        msg: "Add this SSH key to your GitHub account: {{ ssh_public_key.content | b64decode }}"
+
+    # Install Node.js
+    - name: Download NodeSource GPG key
+      get_url:
+        url: https://deb.nodesource.com/gpgkey/nodesource.gpg.key
+        dest: /tmp/nodesource.gpg.key
+
+    - name: Add NodeSource GPG key
+      apt_key:
+        file: /tmp/nodesource.gpg.key
+        state: present
+
+    - name: Add NodeSource repository
+      apt_repository:
+        repo: "deb https://deb.nodesource.com/node_20.x {{ ansible_distribution_release }} main"
+        state: present
+
+    - name: Install Node.js
+      apt:
+        name: nodejs
+        state: present
+        update_cache: yes
+
+    # Install Go
+    - name: Download Go
+      get_url:
+        url: https://go.dev/dl/go1.21.5.linux-amd64.tar.gz
+        dest: /tmp/go1.21.5.linux-amd64.tar.gz
+
+    - name: Remove existing Go installation
+      file:
+        path: /usr/local/go
+        state: absent
+
+    - name: Extract Go
+      unarchive:
+        src: /tmp/go1.21.5.linux-amd64.tar.gz
+        dest: /usr/local
+        remote_src: yes
+
+    # Install Oh My Zsh
+    - name: Check if Oh My Zsh is already installed
+      stat:
+        path: "/home/{{ username }}/.oh-my-zsh"
+      register: oh_my_zsh_installed
+      become_user: "{{ username }}"
+
+    - name: Download Oh My Zsh installer
+      get_url:
+        url: https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh
+        dest: /tmp/install_oh_my_zsh.sh
+        mode: '0755'
+      when: not oh_my_zsh_installed.stat.exists
+
+    - name: Install Oh My Zsh
+      shell: /tmp/install_oh_my_zsh.sh --unattended
+      become_user: "{{ username }}"
+      when: not oh_my_zsh_installed.stat.exists
+
+    - name: Change default shell to zsh
+      user:
+        name: "{{ username }}"
+        shell: /bin/zsh
+
+    - name: Add Go to PATH in .zshrc
+      lineinfile:
+        path: "/home/{{ username }}/.zshrc"
+        line: 'export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin'
+        create: yes
+        owner: "{{ username }}"
+        group: "{{ username }}"
+
+    # Install Docker
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+    - name: Install Docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+
+    - name: Add user to docker group
+      user:
+        name: "{{ username }}"
+        groups: docker
+        append: yes
+
+    - name: Start and enable Docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    # Install VS Code
+    - name: Add Microsoft GPG key
+      apt_key:
+        url: https://packages.microsoft.com/keys/microsoft.asc
+        state: present
+
+    - name: Add VS Code repository
+      apt_repository:
+        repo: "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/trusted.gpg.d/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main"
+        state: present
+
+    - name: Install VS Code
+      apt:
+        name: code
+        state: present
+        update_cache: yes
+
+    # Git Configuration Reminder
+    - name: Create git config reminder
+      copy:
+        content: |
+          # Remember to configure Git:
+          # git config --global user.name "Your Name"
+          # git config --global user.email "your.email@example.com"
+          
+          # Your SSH public key for GitHub:
+          # {{ ssh_public_key.content | b64decode }}
+        dest: "/home/{{ username }}/SETUP_REMINDERS.txt"
+        owner: "{{ username }}"
+        group: "{{ username }}"
+
+    # Final cleanup
+    - name: Clean up downloaded files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/go1.21.5.linux-amd64.tar.gz
+        - /tmp/nodesource.gpg.key
+        - /tmp/install_oh_my_zsh.sh
+
+    - name: Update package cache one final time
+      apt:
+        update_cache: yes
+
+  handlers:
+    - name: restart docker
+      systemd:
+        name: docker
+        state: restarted
