@@ -5,9 +5,12 @@ Im also running this from the VM, you can also run this from your host machine u
 
 ### Install ansible
 # On Ubuntu/Debian
+```
 sudo apt update
+```
+```
 sudo apt install ansible
-
+```
 # Copy this repo
 In the repo run this command to test the connection:
 ```
